@@ -1,0 +1,508 @@
+###############################################################################
+#
+# IAR ANSI C/C++ Compiler V7.40.5.9725/W32 for ARM        08/Aug/2020  16:04:30
+# Copyright 1999-2015 IAR Systems AB.
+#
+#    Cpu mode     =  thumb
+#    Endian       =  little
+#    Source file  =  
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\core\ftl\rsa.c
+#    Command line =  
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\core\ftl\rsa.c
+#        -D BOOT_LEVEL_2 -lcN
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\List
+#        -o
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\Obj
+#        --no_cse --no_unroll --no_inline --no_code_motion --no_tbaa
+#        --no_clustering --no_scheduling --debug --endian=little
+#        --cpu=ARM926EJ-S -e --fpu=None --dlib_config "D:\Program Files
+#        (x86)\IAR Systems\Embedded Workbench
+#        7.2\arm\INC\c\DLib_Config_Normal.h" -I
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\
+#        -I
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\bsp\
+#        -I
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\csp\
+#        -I
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\lib\
+#        -I
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\usb\
+#        --cpu_mode thumb -Ol --use_c++_inline
+#    List file    =  
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\List\rsa.lst
+#    Object file  =  
+#        C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\Obj\rsa.o
+#
+###############################################################################
+
+C:\Users\wen\Desktop\NC\nsac-hiftl！2016.4.6\nsac-hiftl\core\ftl\rsa.c
+      1          #include <stdlib.h>
+      2          #include <stdint.h>
+      3          #include <string.h>
+      4          #include <stdbool.h>
+      5          #include "rsa.h"
+      6          
+      7          
+      8          bool rsa1024(uint64_t res[], uint64_t data[], uint64_t expo[],uint64_t key[])
+      9          {
+     10              int32_t i,j,expo_len;
+     11              uint64_t mod_data[18]={0},result[18]={0};
+     12              uint64_t temp_expo=0;
+     13          
+     14              modbignum(mod_data,data,key,16);
+     15              result[0] = 1;
+     16              expo_len = bit_length(expo,16) /64;
+     17              for(i=0;i<expo_len+1;i++)
+     18              {
+     19                  temp_expo = expo[i];
+     20                  for(j=0;j<64;j++)
+     21                  {
+     22                      if(temp_expo & 0x1UL)
+     23                          modmult1024(result,result,mod_data,key);
+     24          
+     25                      modmult1024(mod_data,mod_data,mod_data,key);
+     26                      temp_expo = temp_expo >> 1;
+     27                  }
+     28              }
+     29              for(i=0;i<16;i++)
+     30                  res[i]=result[i];
+     31          
+     32          
+     33              return 1;
+     34          }
+     35          
+     36          
+     37          
+     38          
+     39          bool addbignum(uint64_t res[], uint64_t op1[], uint64_t op2[],uint32_t n)
+     40          {
+     41          	uint32_t i;
+     42          	uint64_t j,k,carry=0;
+     43          	for(i = 0; i<n; i++)
+     44          	{
+     45          		j = (op1[i] & 0xffffffff) + (op2[i] & 0xffffffff) + carry;
+     46          		
+     47          		k = ((op1[i]>>32) & 0xffffffff) + ((op2[i]>>32) & 0xffffffff) + ((j>>32) & 0xffffffff);
+     48          				
+     49          		carry = ((k>>32) & 0xffffffff);
+     50          		
+     51          		res[i] = ((k & 0xffffffff)<<32)  | (j & 0xffffffff);
+     52          	}
+     53          	res[i] = carry;
+     54          	return 0;
+     55          } 
+     56          
+     57          bool multbignum(uint64_t res[], uint64_t op1[], uint32_t op2 ,uint32_t n)
+     58          {
+     59          	uint32_t i;
+     60          	uint64_t j,k,carry1=0,carry2=0;
+     61          	for(i = 0; i<n; i++)
+     62          	{
+     63          		j = (op1[i] & 0xffffffff) * (op2 & 0xffffffff);
+     64          		
+     65          		k = ((op1[i]>>32) & 0xffffffff) * (op2 & 0xffffffff);
+     66          		carry1 = ((k>>32) & 0xffffffff);
+     67          		k = (k & 0xffffffff) + ((j>>32) & 0xffffffff);
+     68          		j = (j & 0xffffffff) + carry2;
+     69          		k = k + ((j>>32) & 0xffffffff);
+     70          		carry2 = carry1 + ((k>>32) & 0xffffffff);
+     71          		
+     72          		res[i] = ((k & 0xffffffff)<<32)  | (j & 0xffffffff);
+     73          	}
+     74          	res[i] = carry2;
+     75          	return 0;
+     76          } 
+     77          bool modmult1024(uint64_t res[], uint64_t op1[], uint64_t op2[],uint64_t mod[]) //optimized
+     78          {
+     79              int32_t i,j;
+     80              uint64_t mult1[33]={0},mult2[33]={0},
+     81                      result[33]={0},xmod[33]={0};
+     82          
+     83              for(i=0;i<16;i++)
+     84                  xmod[i]=mod[i];
+     85          
+     86              for(i=0;i<16;i++)
+     87              {
+     88                  for(j=0;j<33;j++)
+     89                  {
+     90                      mult1[j]=0;
+     91                      mult2[j]=0;
+     92                  }
+     93                  multbignum(mult1,op1,(op2[i]&0xffffffff),16);
+     94                  multbignum(mult2,op1,((op2[i]>>32)&0xffffffff),16);
+     95                  slnbignum(mult2,mult2,33,32);
+     96                  addbignum(mult2,mult2,mult1,32);
+     97          
+     98                  slnbignum(mult2,mult2,33,64*i);
+     99          
+    100                  addbignum(result,result,mult2,32);
+    101          
+    102              }
+    103              modbignum(result,result,xmod,33);
+    104              for(i=0;i<16;i++)
+    105                      res[i]=result[i];
+    106          
+    107              return 0;
+    108          }
+    109          /*
+    110          bool modmult1024(uint64_t res[], uint64_t op1[], uint64_t op2[],uint64_t mod[])
+    111          {
+    112          	int32_t i,j;
+    113          	uint64_t mult1[19]={0},mult2[19]={0},result[18]={0};
+    114          
+    115          	for(i=0;i<16;i++)
+    116          	{
+    117          		multbignum(mult1,op1,(op2[i]&0xffffffff),16);
+    118          
+    119          		multbignum(mult2,op1,((op2[i]>>32)&0xffffffff),16);
+    120          		slnbignum(mult2,mult2,17,32);
+    121          		addbignum(mult2,mult2,mult1,17);
+    122          		modbignum(mult2,mult2,mod,17);
+    123          
+    124          		for(j=0;j<i;j++)
+    125          		{
+    126          		    slnbignum(mult2,mult2,17,64);
+    127          		    modbignum(mult2,mult2,mod,17);
+    128          		}
+    129          		
+    130          		addbignum(result,result,mult2,16);
+    131          		modbignum(result,result,mod,17);
+    132          		
+    133          	}
+    134          	for(i=0;i<16;i++)
+    135          	        res[i]=result[i];
+    136          	
+    137          	return 0;
+    138          }
+    139          */
+    140          bool modbignum(uint64_t res[],uint64_t op1[], uint64_t op2[],uint32_t n)//optimized
+    141          {
+    142              uint32_t i;
+    143              int32_t len_op1,len_op2,len_dif;
+    144          
+    145              len_op1 = bit_length(op1,n);
+    146              len_op2 = bit_length(op2,n);
+    147              len_dif = len_op1 - len_op2;
+    148          
+    149          
+    150          
+    151              for(i=0;i<n;i++)
+    152                  res[i]=op1[i];
+    153          
+    154              if(len_dif < 0)
+    155              {
+    156                  return 1;
+    157              }
+    158          
+    159              if(len_dif == 0)
+    160              {
+    161                  while(compare(res,op2,n)>=0)
+    162                  {
+    163                      subbignum(res,res,op2,n);
+    164                  }
+    165                  return 1;
+    166              }
+    167          
+    168              slnbignum(op2,op2,n,len_dif);
+    169              for(i=0;i<len_dif;i++)
+    170              {
+    171                  srnbignum(op2,op2,n,1);
+    172                  while(compare(res,op2,n)>=0)
+    173                  {
+    174                      subbignum(res,res,op2,n);
+    175                  }
+    176              }
+    177          
+    178              return 1;
+    179          }
+    180          
+    181          /*
+    182          bool modbignum(uint64_t res[],uint64_t op1[], uint64_t op2[],uint32_t n)
+    183          {
+    184              uint32_t i;
+    185          	int32_t len_op1,len_op2,len_dif;
+    186          	
+    187          	len_op1 = bit_length(op1,n);
+    188          	len_op2 = bit_length(op2,n);
+    189          	len_dif = len_op1 - len_op2;
+    190          	
+    191          	for(i=0;i<n;i++)
+    192          		res[i]=op1[i];
+    193          	
+    194          	if(len_dif < 0)
+    195          	{		
+    196          		return 1;
+    197          	}
+    198          	if(len_dif == 0)
+    199          	{
+    200          		modnum(res,res,op2,n);
+    201          		return 1;
+    202          	}
+    203          	
+    204          	slnbignum(op2,op2,n,len_dif);
+    205          	for(i=0;i<len_dif;i++)
+    206          	{
+    207          		srnbignum(op2,op2,n,1);
+    208          		modnum(res,res,op2,n);
+    209          	}
+    210          	return 1;
+    211          }
+    212          */
+    213          /****************************************************************
+    214           * bool modnum(uint64_t res[],uint64_t op1[], uint64_t op2[],uint32_t n)
+    215           * res = op1 % op2
+    216           * n is bit length/64
+    217           * res must have extra 64 bits to avoid errors 
+    218           ****************************************************************/
+    219          bool modnum(uint64_t res[],uint64_t op1[], uint64_t op2[],uint32_t n)
+    220          {
+    221          	uint32_t i;
+    222          	bool result=0;
+    223          	for(i=0;i<n;i++)
+    224          		res[i]=op1[i];
+    225          		
+    226          	while(!result)
+    227          	{
+    228          		result = subbignum(res,res,op2,n);
+    229          	}
+    230          	
+    231          	addbignum(res,res,op2,n);
+    232          	res[n]=0;
+    233          			
+    234          	return 0;
+    235          }
+    236          /****************************************************************
+    237          * int32_t compare(uint64_t op1[], uint64_t op2[],uint32_t n)
+    238          * returns 1 if op1>op2
+    239          * 		 -1 if op1<op2
+    240          * 		  0 if op1=op2
+    241          *****************************************************************/
+    242          int32_t compare(uint64_t op1[], uint64_t op2[],uint32_t n)
+    243          {
+    244          	for( ; n>0; n--)
+    245          	{
+    246          		if(op1[n-1]>op2[n-1])
+    247          		{
+    248          			return 1;
+    249          		}
+    250          		else if(op1[n-1]<op2[n-1])
+    251          		{
+    252          			return -1;
+    253          		}
+    254          	}
+    255          			
+    256          	return 0;
+    257          }
+    258          
+    259          /****************************************************************
+    260           * bool subbignum(uint64_t res[], uint64_t op1[], uint64_t op2[],uint32_t n)
+    261           * subtracts op2 from op1
+    262           * returns 0 if op1>=op2
+    263           * 		   1 if op1<op2
+    264           * result is not valid if return value is 1 (or is in 2's compliment :P)
+    265           * **************************************************************/
+    266          bool subbignum(uint64_t res[], uint64_t op1[], uint64_t op2[],uint32_t n)
+    267          {
+    268          	bool carry=0;
+    269          	uint32_t i;
+    270          	for(i=0;i<n;i++)
+    271          	{
+    272          		if(carry)
+    273          		{
+    274          			if(op1[i]!=0)
+    275          				carry=0;
+    276          			op1[i]--;		
+    277          		}
+    278          		if(op1[i]<op2[i])
+    279          			carry = 1;
+    280          			
+    281          		res[i]= op1[i] - op2[i];
+    282          	}	
+    283          	return carry;
+    284          }
+    285          bool slnbignum(uint64_t res[], uint64_t op[],uint32_t len, uint32_t n)//shift left by n
+    286          {
+    287              uint32_t i,x,y;
+    288              uint64_t j,k,carry = 0;
+    289              x = n / 64;
+    290              y = n % 64;
+    291          
+    292              for(i=len; i - x >0; i--)
+    293              {
+    294                  res[i-1] = op[i - 1 - x];
+    295              }
+    296              for(;i>0;i--)
+    297              {
+    298                  res[i-1] = 0;
+    299              }
+    300              for(i=0;i<len;i++)
+    301              {
+    302                  j = res[i];
+    303                  k=0;
+    304                  for(x=0;x<y;x++)
+    305                  {
+    306                      if(j & 0x8000000000000000)
+    307                      {
+    308                          k = (k<<1) | 1;
+    309                      }
+    310                      else
+    311                      {
+    312                          k = (k<<1);
+    313                      }
+    314                      j = j <<1;
+    315                  }
+    316                  res[i] = j | carry;
+    317                  carry = k;
+    318              }
+    319              return 1;
+    320          }
+    321          bool srnbignum(uint64_t res[], uint64_t op[],uint32_t len, uint32_t n)//shift right by n
+    322          {
+    323              uint32_t i,x,y;
+    324              uint64_t j,k,carry = 0;
+    325              x = n / 64;
+    326              y = n % 64;
+    327          
+    328              for(i=0; i + x < len; i++)
+    329              {
+    330                  res[i] = op[i + x];
+    331              }
+    332              for(;i<len;i++)
+    333              {
+    334                  res[i] = 0;
+    335              }
+    336              for(i=len;i>0;i--)
+    337              {
+    338                  j = res[i-1];
+    339                  k=0;
+    340                  for(x=0;x<y;x++)
+    341                  {
+    342                      if(j & 0x0000000000000001)
+    343                      {
+    344                          k = (k>>1) | 0x8000000000000000;
+    345                      }
+    346                      else
+    347                      {
+    348                          k = (k>>1);
+    349                      }
+    350                      j = j >>1;
+    351                  }
+    352                  res[i-1] = j | carry;
+    353                  carry = k;
+    354              }
+    355              return 1;
+    356          
+    357          }
+    358          /****************************************************************
+    359           * uint32_t bit_length(uint64_t op[],uint32_t n)
+    360           * returns position of MSB present
+    361           *
+    362           *
+    363           ****************************************************************/
+    364          uint32_t bit_length(uint64_t op[],uint32_t n)
+    365          {
+    366              uint32_t len=0;
+    367              uint32_t i;
+    368              uint64_t unit = 1;
+    369              for( ;n>0;n--)
+    370              {
+    371                  if(op[n-1]==0)
+    372                      continue;
+    373                  for(i=64;i>0;i--)
+    374                  {
+    375                      if(op[n-1] & (unit<<(i-1)))
+    376                      {
+    377                          len = (64*(n-1)) + i;
+    378                          break;
+    379                      }
+    380          
+    381                  }
+    382                  if(len)
+    383                      break;
+    384              }
+    385              return len;
+    386          }
+    387          /*
+    388          bool setbitbignum(uint64_t op[],uint32_t n,uint32_t bit)//sets n'th bit
+    389          {
+    390              uint32_t q,r;
+    391              uint64_t unit=0x1;
+    392              q = bit / 64;
+    393              r = bit % 64;
+    394              if(q>=n)
+    395                  return 0;
+    396              op[q] |= (unit<<r);
+    397              return 1;
+    398          }
+    399          */
+
+   Maximum stack usage in bytes:
+
+   .cstack Function
+   ------- --------
+      44   addbignum
+      40   bit_length
+        40 __aeabi_llsl
+      16   compare
+      32   modbignum
+        32   -> bit_length
+        32   -> compare
+        32   -> slnbignum
+        32   -> srnbignum
+        32   -> subbignum
+    1080   modmult1024
+      1080   -> __aeabi_memclr4
+      1080   -> addbignum
+      1080   -> modbignum
+      1080   -> multbignum
+      1080   -> slnbignum
+      24   modnum
+        24   -> addbignum
+        24   -> subbignum
+      64   multbignum
+        64 __aeabi_lmul
+     328   rsa1024
+       328   -> __aeabi_memclr4
+       328   -> bit_length
+       328   -> modbignum
+       328   -> modmult1024
+      48   slnbignum
+        48 __aeabi_uidivmod
+      40   srnbignum
+        40 __aeabi_uidivmod
+      28   subbignum
+
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       4  ??DataTable0
+       4  ??DataTable0_1
+     144  ?_0
+     144  ?_1
+     264  ?_2
+     264  ?_3
+     264  ?_4
+     264  ?_5
+     192  addbignum
+     116  bit_length
+      94  compare
+     176  modbignum
+     278  modmult1024
+      94  modnum
+     268  multbignum
+     172  rsa1024
+     222  slnbignum
+     222  srnbignum
+     142  subbignum
+
+ 
+ 1 344 bytes in section .rodata
+ 1 984 bytes in section .text
+ 
+ 1 984 bytes of CODE  memory
+ 1 344 bytes of CONST memory
+
+Errors: none
+Warnings: 1

@@ -1,0 +1,237 @@
+###############################################################################
+#
+# IAR ANSI C/C++ Compiler V7.40.5.9725/W32 for ARM        19/Jan/2021  21:39:47
+# Copyright 1999-2015 IAR Systems AB.
+#
+#    Cpu mode     =  thumb
+#    Endian       =  little
+#    Source file  =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\core\ftl\hmac-sha1.c
+#    Command line =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\core\ftl\hmac-sha1.c
+#        -D BOOT_LEVEL_2 -lcN
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\List
+#        -o
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\Obj
+#        --no_cse --no_unroll --no_inline --no_code_motion --no_tbaa
+#        --no_clustering --no_scheduling --debug --endian=little
+#        --cpu=ARM926EJ-S -e --fpu=None --dlib_config "D:\Program Files\IAR
+#        Systems\Embedded Workbench 7.2\arm\INC\c\DLib_Config_Normal.h" -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\bsp\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\csp\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\lib\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\usb\
+#        --cpu_mode thumb -Ol --use_c++_inline
+#    List file    =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\List\hmac-sha1.lst
+#    Object file  =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\prj\iar\Debug\Obj\hmac-sha1.o
+#
+###############################################################################
+
+C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl！2016.4.6\nsac-hiftl\core\ftl\hmac-sha1.c
+      1          /******************************************************/
+      2          /* hmac-sha1()                                        */
+      3          /* Performs the hmac-sha1 keyed secure hash algorithm */
+      4          /******************************************************/
+      5          #include <stdint.h>
+      6          #include <stdlib.h>
+      7          
+      8          #define MAX_MESSAGE_LENGTH 4096
+      9          
+     10          extern int sha1digest(uint8_t *digest, const uint8_t *data, size_t databytes);
+     11          
+     12          #ifdef HMAC_DEBUG
+     13          debug_out(
+     14                      unsigned char *label,
+     15                      unsigned char *data,
+     16                      int data_length
+     17                  )
+     18          {
+     19          int i,j;
+     20          int num_blocks;
+     21          int block_remainder;
+     22              num_blocks = data_length / 16;
+     23              block_remainder = data_length % 16;
+     24          
+     25              printf("%s\n",label);
+     26          
+     27              for (i=0; i< num_blocks;i++)
+     28              {
+     29                  printf("\t");
+     30                  for (j=0; j< 16;j++)
+     31                  {
+     32                      printf("%02x ", data[j + (i*16)]);
+     33                  }
+     34                  printf("\n");
+     35              }
+     36          
+     37              if (block_remainder > 0)
+     38              {
+     39                  printf("\t");
+     40                  for (j=0; j<block_remainder; j++)
+     41                  {
+     42                      printf("%02x ", data[j+(num_blocks*16)]);
+     43                  }
+     44                  printf("\n");
+     45              }
+     46          }
+     47          #endif
+     48          
+     49          void hmac_sha1(
+     50                          unsigned char *digest,
+     51                          unsigned char *data,
+     52                          int data_length
+     53                          )
+     54          
+     55          {
+     56              int b = 64; /* blocksize */
+     57              unsigned char ipad = 0x36;
+     58          
+     59              unsigned char opad = 0x5c;
+     60          
+     61              unsigned char k0[64];
+     62              unsigned char k0xorIpad[64];
+     63              unsigned char step7data[64];
+     64              unsigned char step5data[MAX_MESSAGE_LENGTH+128];
+     65              unsigned char step8data[64+20];
+     66              int i;
+     67              
+     68              unsigned char key[64] = {0x6a, 0x49, 0x4d, 0x4f, 0x43, 0x37, 0x44, 0x36, 0x58, 0x63, 0x59, 0x44, 0x4f, 0x45, 0x32, 0x71, 0x53, 0x5a, 0x4b, 0x73, 0x73, 0x31, 0x61, 0x63, 0x4d, 0x5a, 0x54, 0x53, 0x43, 0x6e, 0x62, 0x4e, 0x44, 0x56, 0x53, 0x61, 0x75, 0x77, 0x39, 0x53, 0x63, 0x63, 0x72, 0x61, 0x39, 0x69, 0x43, 0x49, 0x33, 0x33, 0x35, 0x42, 0x51, 0x76, 0x77, 0x66, 0x45, 0x35, 0x6e, 0x56, 0x6d, 0x6e, 0x4c, 0x56};
+     69              int key_length = 64;
+     70              
+     71              /*
+     72              for(int i0=0;i0<32;i0++)
+     73              {
+     74                unsigned char temp=key[i0];
+     75                key[i0]=key[63-i0];
+     76                key[63-i0]=temp;
+     77              }
+     78              */
+     79          
+     80              for (i=0; i<64; i++)
+     81              {
+     82                  k0[i] = 0x00;
+     83              }
+     84          
+     85          
+     86          
+     87              if (key_length != b)    /* Step 1 */
+     88              {
+     89                  /* Step 2 */
+     90                  if (key_length > b)      
+     91                  {
+     92                      sha1digest(digest, key, key_length);
+     93                      for (i=0;i<20;i++)
+     94                      {
+     95                          k0[i]=digest[i];
+     96                      }
+     97                  }
+     98                  else if (key_length < b)  /* Step 3 */
+     99                  {
+    100                      for (i=0; i<key_length; i++)
+    101                      {
+    102                          k0[i] = key[i];
+    103                      }
+    104                  }
+    105              }
+    106              else
+    107              {
+    108                  for (i=0;i<b;i++)
+    109                  {
+    110                      k0[i] = key[i];
+    111                  }
+    112              }
+    113          #ifdef HMAC_DEBUG
+    114              debug_out("k0",k0,64);
+    115          #endif
+    116              /* Step 4 */
+    117              for (i=0; i<64; i++)
+    118              {
+    119                  k0xorIpad[i] = k0[i] ^ ipad;
+    120              }
+    121          #ifdef HMAC_DEBUG
+    122              debug_out("k0 xor ipad",k0xorIpad,64);
+    123          #endif
+    124              /* Step 5 */
+    125              for (i=0; i<64; i++)
+    126              {
+    127                  step5data[i] = k0xorIpad[i];
+    128              }
+    129              for (i=0;i<data_length;i++)
+    130              {
+    131                  step5data[i+64] = data[i];
+    132              }
+    133          #ifdef HMAC_DEBUG
+    134              debug_out("(k0 xor ipad) || text",step5data,data_length+64);
+    135          #endif
+    136          
+    137              /* Step 6 */
+    138              sha1digest(digest, step5data, data_length+b);
+    139          
+    140          #ifdef HMAC_DEBUG
+    141              debug_out("Hash((k0 xor ipad) || text)",digest,20);
+    142          #endif
+    143          
+    144              /* Step 7 */
+    145              for (i=0; i<64; i++)
+    146              {
+    147                  step7data[i] = k0[i] ^ opad;
+    148              }
+    149          
+    150          #ifdef HMAC_DEBUG
+    151              debug_out("(k0 xor opad)",step7data,64);
+    152          #endif
+    153          
+    154              /* Step 8 */
+    155              for (i=0;i<64;i++)
+    156              {
+    157                  step8data[i] = step7data[i];
+    158              }
+    159              for (i=0;i<20;i++)
+    160              {
+    161                  step8data[i+64] = digest[i];
+    162              }
+    163          
+    164          #ifdef HMAC_DEBUG
+    165              debug_out("(k0 xor opad) || Hash((k0 xor ipad) || text)",step8data,20+64);
+    166          #endif
+    167          
+    168              /* Step 9 */
+    169              sha1digest(digest, step8data, b+20);
+    170          
+    171          #ifdef HMAC_DEBUG
+    172              debug_out("HASH((k0 xor opad) || Hash((k0 xor ipad) || text))",digest,20);
+    173          #endif
+    174          }
+
+   Maximum stack usage in bytes:
+
+   .cstack Function
+   ------- --------
+    4592   hmac_sha1
+      4592   -> __aeabi_memcpy4
+      4592   -> sha1digest
+
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      64  ?_0
+     324  hmac_sha1
+
+ 
+  64 bytes in section .rodata
+ 324 bytes in section .text
+ 
+ 324 bytes of CODE  memory
+  64 bytes of CONST memory
+
+Errors: none
+Warnings: none

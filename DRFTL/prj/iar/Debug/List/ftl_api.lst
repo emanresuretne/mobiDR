@@ -1,0 +1,637 @@
+###############################################################################
+#
+# IAR ANSI C/C++ Compiler V7.40.5.9725/W32 for ARM        19/Jan/2021  21:39:46
+# Copyright 1999-2015 IAR Systems AB.
+#
+#    Cpu mode     =  thumb
+#    Endian       =  little
+#    Source file  =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\core\ftl\ftl_api.c
+#    Command line =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\core\ftl\ftl_api.c
+#        -D BOOT_LEVEL_2 -lcN
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\List
+#        -o
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\Obj
+#        --no_cse --no_unroll --no_inline --no_code_motion --no_tbaa
+#        --no_clustering --no_scheduling --debug --endian=little
+#        --cpu=ARM926EJ-S -e --fpu=None --dlib_config "D:\Program Files\IAR
+#        Systems\Embedded Workbench 7.2\arm\INC\c\DLib_Config_Normal.h" -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\bsp\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\csp\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\lib\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\usb\
+#        --cpu_mode thumb -Ol --use_c++_inline
+#    List file    =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\List\ftl_api.lst
+#    Object file  =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\Obj\ftl_api.o
+#
+###############################################################################
+
+C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\core\ftl\ftl_api.c
+      1          /*********************************************************
+      2           * Module name: ftl_api.c
+      3           *
+      4           * Copyright 2010, 2011. All Rights Reserved, Crane Chu.
+      5           *
+      6           * This file is part of OpenNFM.
+      7           *
+      8           * OpenNFM is free software: you can redistribute it and/or 
+      9           * modify it under the terms of the GNU General Public 
+     10           * License as published by the Free Software Foundation, 
+     11           * either version 3 of the License, or (at your option) any 
+     12           * later version.
+     13           * 
+     14           * OpenNFM is distributed in the hope that it will be useful,
+     15           * but WITHOUT ANY WARRANTY; without even the implied 
+     16           * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+     17           * PURPOSE. See the GNU General Public License for more 
+     18           * details.
+     19           *
+     20           * You should have received a copy of the GNU General Public 
+     21           * License along with OpenNFM. If not, see 
+     22           * <http://www.gnu.org/licenses/>.
+     23           *
+     24           * First written on 2010-01-01 by cranechu@gmail.com
+     25           *
+     26           * Module Description:
+     27           *    FTL APIs.
+     28           *
+     29           *********************************************************/
+     30          
+     31          #include <core\inc\cmn.h>
+     32          #include <core\inc\ftl.h>
+     33          #include <core\inc\ubi.h>
+     34          //#include <core\inc\mtd.h>
+     35          #include <sys\sys.h>
+     36          #include "ftl_inc.h"
+     37          #include <core\inc\buf.h>
+     38          #include <string.h>
+     39             
+     40          #include <stdint.h>
+     41          #include <stdlib.h>
+     42          
+     43          /* Advanced Page Mapping FTL:
+     44           * - Block Dirty Table: LOG_BLOCK 0, cache all
+     45           * - ROOT Table: LOG_BLOCK 1, cache all. point to journal blocks.
+     46           * - Page Mapping Table: LOG_BLOCK 2~N, cache x pages with LRU algo.
+     47           * - DATA Journal: commit
+     48           * - Init: read BDT, ROOT, PMT, Journal info, ...
+     49           * - Reclaim
+     50           * - Meta Data Page: in last page in PMT blocks and data blocks.
+     51           * - choose journal block on erase and write, according to die index
+     52           *
+     53           * TODO: advanced features:
+     54           * - sanitizing
+     55           * - bg erase
+     56           * - check wp/trim, ...
+     57           */
+     58          
+     59          extern int backup_flag; 
+     60          extern int restore_flag;
+     61          extern int initial_flag;
+     62          // static int loop_count = 0;
+     63          int max_records = 0;
+     64          static int isodd = 1;
+     65          static int isodd2 = 1;
+     66          static UINT32 read_address = 0;
+     67          static UINT32 write_address = 0;
+     68          extern int PMT_isvalid(PGADDR page_addr);
+     69          PHY_BLOCK start_record_block = RECORD_START_BLOCK;
+     70          PHY_BLOCK current_record_block = RECORD_START_BLOCK;
+     71          PAGE_OFF current_record_page = 0;
+     72          UINT32 record_cache_page[512] = {0};
+     73          UINT32 record_index = 0;
+     74          static int backup_version = 0;
+     75          static int page_version = 0;
+     76          uint8_t digest[20];
+     77          
+     78          extern UINT8 wear_l[4096];
+     79          static int current_state=0;
+     80          
+     81          typedef unsigned char *byte_pointer;
+     82          // typedef unsigned char uint8_t;
+     83          
+     84          // extern int sha1digest(uint8_t *digest, const uint8_t *data, size_t databytes);
+     85          extern void hmac_sha1(unsigned char *digest, unsigned char *data, int data_length);
+     86          
+     87          extern STATUS Threshold_DATA_Reclaim(void);
+     88          
+     89          void show_bytes(byte_pointer start, int len) {
+     90              int i;
+     91              for (i = 0; i < len; i++)
+     92              uart_printf(" %x", start[i]);    //line:data:show_bytes_printf
+     93              uart_printf("\n");
+     94          }
+     95             
+     96          STATUS FTL_Format() {
+     97            STATUS ret;
+     98              
+     99            ret = UBI_Format();
+    100            if (ret == STATUS_SUCCESS) {
+    101              ret = UBI_Init();
+    102            }
+    103          
+    104            if (ret == STATUS_SUCCESS) {
+    105              ret = DATA_Format();
+    106            }
+    107          
+    108            if (ret == STATUS_SUCCESS) {
+    109              ret = HDI_Format();
+    110            }
+    111          
+    112            if (ret == STATUS_SUCCESS) {
+    113              ret = PMT_Format();
+    114            }
+    115          
+    116            if (ret == STATUS_SUCCESS) {
+    117              ret = BDT_Format();
+    118            }
+    119          
+    120            if (ret == STATUS_SUCCESS) {
+    121              ret = ROOT_Format();
+    122            }
+    123          
+    124            return ret;
+    125          }
+    126          
+    127          STATUS FTL_Init() {
+    128            STATUS ret;
+    129          
+    130            ret = UBI_Init();
+    131            if (ret == STATUS_SUCCESS) {
+    132              /* scan tables on UBI, and copy to RAM */
+    133              ret = ROOT_Init();
+    134            }
+    135          
+    136            if (ret == STATUS_SUCCESS) {
+    137              ret = BDT_Init();
+    138            }
+    139          
+    140            if (ret == STATUS_SUCCESS) {
+    141              ret = PMT_Init();
+    142            }
+    143          
+    144            if (ret == STATUS_SUCCESS) {
+    145              ret = HDI_Init();
+    146            }
+    147          
+    148            if (ret == STATUS_SUCCESS) {
+    149              ret = DATA_Replay(root_table.hot_journal);
+    150            }
+    151          
+    152            if (ret == STATUS_SUCCESS) {
+    153              ret = DATA_Replay(root_table.cold_journal);
+    154            }
+    155          
+    156            if (ret == STATUS_SUCCESS) {
+    157              /* handle reclaim PLR: start reclaim again. Some data should
+    158               * be written in the same place, so just rewrite same data in the
+    159               * same page regardless this page is written or not. */
+    160          
+    161              /* check if hot journal blocks are full */
+    162              if (DATA_IsFull(TRUE) == TRUE) {
+    163                ret = DATA_Reclaim(TRUE);
+    164                if (ret == STATUS_SUCCESS) {
+    165                  ret = DATA_Commit();
+    166                }
+    167              }
+    168          
+    169              /* check if cold journal blocks are full */
+    170              if (DATA_IsFull(FALSE) == TRUE) {
+    171                ret = DATA_Reclaim(FALSE);
+    172                if (ret == STATUS_SUCCESS) {
+    173                  ret = DATA_Commit();
+    174                }
+    175              }
+    176            }
+    177          
+    178            return ret;
+    179          }
+    180          
+    181          STATUS FTL_Write(PGADDR addr, void* buffer) {
+    182            STATUS ret;
+    183            BOOL is_hot = HDI_IsHotPage(addr);
+    184            UINT32 i = 0;
+    185            
+    186            ret = DATA_Write(addr, buffer, is_hot);
+    187            
+    188            /*
+    189            if(addr == 240010){
+    190               backup_flag = 1 - backup_flag;
+    191               uart_printf("backup flag is %d:\n", backup_flag);
+    192            } else if(addr == 240020){
+    193               restore_flag = 1 - restore_flag;
+    194               uart_printf("restore flag is %d:\n", restore_flag);
+    195            } else if(addr == 240030){
+    196               initial_flag = 1 - initial_flag;
+    197               uart_printf("initial flag is %d:\n", initial_flag);
+    198            }
+    199            */
+    200            
+    201            if (current_state == 0){
+    202              if(addr == 240010){
+    203                current_state = 1;
+    204              }
+    205            } else if(current_state == 1){
+    206              if(addr == 240020){
+    207                current_state = 2;
+    208              } else {
+    209                current_state = 0;
+    210              }
+    211            } else if(current_state == 2){
+    212              if(addr == 240030){
+    213                current_state = 3;
+    214              } else {
+    215                current_state = 0;
+    216              }
+    217            } else if(current_state == 3){
+    218              if(addr == 240040){
+    219                current_state = 4;
+    220              } else {
+    221                current_state = 0;
+    222              }
+    223            } else {
+    224              if(addr == 240014){
+    225                backup_flag = 1 - backup_flag;
+    226                uart_printf("backup flag is %d:\n", backup_flag);
+    227              } else if(addr == 240024){
+    228                restore_flag = 1 - restore_flag;
+    229                uart_printf("restore flag is %d:\n", restore_flag);
+    230              } else if(addr == 240034){
+    231                initial_flag = 1 - initial_flag;
+    232                uart_printf("initial flag is %d:\n", initial_flag);
+    233                for(i=0;i<4096;i++){
+    234                  uart_printf("wear leveling of block %d is %d:\n", i, wear_l[i]);
+    235                }
+    236              }
+    237              current_state = 0;
+    238            }
+    239            
+    240            if (ret == STATUS_SUCCESS) {
+    241              if (DATA_IsFull(is_hot) == TRUE) {
+    242                ret = DATA_Reclaim(is_hot);
+    243                if (ret == STATUS_SUCCESS) {
+    244                  ret = DATA_Commit();
+    245                }
+    246              }
+    247            }
+    248            
+    249            
+    250            
+    251            // uart_printf("FTL_Write:   %d\n",addr);
+    252            // uart_printf("FTL_Write:   %d,   %x\n",addr, *((unsigned char*)buffer));
+    253            // show_bytes(buffer, 2048); 
+    254            // uart_printf("backup flag:  %d\n", backup_flag);
+    255            
+    256            return ret;
+    257          }
+    258          
+    259          STATUS FTL_Read(PGADDR addr, void* buffer) {
+    260            LOG_BLOCK block;
+    261            PAGE_OFF page;
+    262            STATUS ret;
+    263            SPARE spare;
+    264            LOG_BLOCK next_block = INVALID_BLOCK;
+    265            
+    266            char * const teststring = "Backup finished";
+    267            unsigned char buffer_with_address[2060];
+    268            
+    269            
+    270            if (addr==240000 && backup_flag){  // 判断是否读取备份数据
+    271              if (isodd){ // 判断是返回 page 数据还是 page number
+    272              // uart_printf("special read address\n");
+    273              //  uart_printf("record_index=%d\n", record_index);   //record_index: 当前SDRAM中FTL_write的index，备份从此开始
+    274              if (record_index==0){  //SDRAM中FTL_write记录全部备份完，从Flash中读取之前的记录
+    275                uart_printf("record_index=0\n");
+    276                if ((current_record_block == RECORD_START_BLOCK) && (current_record_page == 0)){  // 所有FTL_write记录全部备份完(包括SDRAM和Flash)，备份结束
+    277                  uart_printf("backup finished\n");
+    278                  memcpy(buffer, teststring, SECTOR_SIZE);
+    279                  backup_flag = 0;
+    280                  backup_version += 1;
+    281                  page_version = 0;
+    282                  
+    283                  ret = UBI_Erase(RECORD_START_BLOCK, RECORD_START_BLOCK);
+    284                  
+    285                  // 垃圾回收(need to be filled)
+    286                  // ret = STATUS_SUCCESS;        
+    287                  ret = Threshold_DATA_Reclaim();
+    288                  if (ret == STATUS_SUCCESS) {
+    289                    ret = DATA_Commit();
+    290                  }
+    291                  
+    292                  return ret;
+    293                }
+    294                else{
+    295                  uart_printf("load record\n");
+    296                  uart_printf("current_record_block=%d, current_record_page=%d\n", current_record_block, current_record_page);
+    297                  if (current_record_page == 0) {
+    298                      next_block = current_record_block - 1;
+    299                      current_record_page = 64;
+    300                      ret = UBI_Erase(current_record_block, current_record_block);
+    301                      if (ret == STATUS_SUCCESS) {
+    302                      current_record_block = next_block;
+    303                    }
+    304                  }
+    305                  ret = UBI_Read(current_record_block, current_record_page-1, record_cache_page, NULL); //从Flash中读取之前的记录
+    306                  current_record_page--;
+    307                  record_index = 512;  
+    308                }
+    309             }
+    310             block = PM_NODE_BLOCK(record_cache_page[record_index-1]);
+    311             page = PM_NODE_PAGE(record_cache_page[record_index-1]);
+    312             // uart_printf("block=%d, page=%d\n", block, page);
+    313             ret = UBI_Read(block, page, buffer, spare);
+    314             record_index--;
+    315             read_address = spare[0];
+    316             isodd = 0;
+    317             // compute hash
+    318             memcpy(buffer_with_address, (unsigned char*)buffer, 2048);
+    319             memcpy(buffer_with_address+2048, &read_address, 4);
+    320             memcpy(buffer_with_address+2052, &backup_version, 4);
+    321             memcpy(buffer_with_address+2056, &page_version, 4);
+    322             hmac_sha1(digest, buffer_with_address, 2060);
+    323             
+    324             // show_bytes(buffer_with_address, 2060);                
+    325             return ret;    
+    326            }
+    327            else {
+    328             memcpy(buffer, &read_address, 4);
+    329             memcpy((unsigned char*)buffer+4, &backup_version, 4);
+    330             memcpy((unsigned char*)buffer+8, &page_version, 4);
+    331             memcpy((unsigned char*)buffer+12, digest, 20);
+    332             memset((unsigned char*)buffer+32, 0, 2024);
+    333             // show_bytes(digest, 20);
+    334             isodd = 1;
+    335             page_version += 1;
+    336             ret = STATUS_SUCCESS;
+    337             // buffer = buffer +4;
+    338             return ret;
+    339            }
+    340            }
+    341            
+    342            
+    343            
+    344            // uart_printf("before pmt search\n");
+    345            ret = PMT_Search(addr, &block, &page);
+    346            // uart_printf("pmt search, %d, %d\n",block,page);
+    347            
+    348            if (ret == STATUS_SUCCESS) {
+    349              ret = UBI_Read(block, page, buffer, NULL);
+    350              // uart_printf("ubi read\n");
+    351            } 
+    352            
+    353          
+    354            //if (addr != 240000){
+    355              //uart_printf("FTL_Read:   %d\n",addr);
+    356              // show_bytes((unsigned char*)buffer, 2048);
+    357              // uart_printf("backup flag:  %d\n", backup_flag);
+    358            //}
+    359            
+    360            return ret;
+    361          }
+    362          
+    363          STATUS FTL_Trim(PGADDR start, PGADDR end) {
+    364            PGADDR addr;
+    365            STATUS ret = STATUS_SUCCESS;
+    366          
+    367            for (addr = start; addr <= end; addr++) {
+    368              ret = FTL_Write(addr, NULL);
+    369              if (ret != STATUS_SUCCESS) {
+    370                break;
+    371              }
+    372            }
+    373          
+    374            return ret;
+    375          }
+    376          
+    377          STATUS FTL_SetWP(PGADDR laddr, BOOL enabled) {
+    378            return STATUS_FAILURE;
+    379          }
+    380          
+    381          BOOL FTL_CheckWP(PGADDR laddr) {
+    382            return FALSE;
+    383          }
+    384          
+    385          STATUS FTL_BgTasks() {
+    386            return STATUS_SUCCESS;
+    387          }
+    388          
+    389          PGADDR FTL_Capacity() {
+    390            LOG_BLOCK block;
+    391          
+    392            block = UBI_Capacity;//3989
+    393            block -= JOURNAL_BLOCK_COUNT; /* data hot journal *///1
+    394            block -= JOURNAL_BLOCK_COUNT; /* data cold journal *///1
+    395            block -= JOURNAL_BLOCK_COUNT; /* data reclaim journal *///1
+    396            block -= PMT_BLOCK_COUNT; /* pmt blocks *///40
+    397            block -= 2; /* bdt blocks */
+    398            block -= 2; /* root blocks */
+    399            block -= 2; /* hdi reserved */
+    400            
+    401            // block -= 8; // reserved to hold records of FTL_write
+    402            
+    403            block -= block / 100 * OVER_PROVISION_RATE; /* over provision */
+    404            
+    405            uart_printf("%s: UBI_Capacity=%d\r\n",__func__,UBI_Capacity);
+    406            uart_printf("%s: actual user capacity: block=%d\r\n",__func__,block);//3823
+    407          
+    408            /* last page in every block is reserved for meta data collection */
+    409            return block * (PAGE_PER_PHY_BLOCK - 1);//471
+    410          }
+    411          
+    412          STATUS FTL_Flush() {
+    413            STATUS ret;
+    414          
+    415            ret = DATA_Commit();
+    416            if (ret == STATUS_SUCCESS) {
+    417              ret = UBI_Flush();
+    418            }
+    419          
+    420            if (ret == STATUS_SUCCESS) {
+    421              ret = UBI_SWL();
+    422            }
+    423          
+    424            return ret;
+    425          }
+
+   Maximum stack usage in bytes:
+
+   .cstack Function
+   ------- --------
+       0   FTL_BgTasks
+       8   FTL_Capacity
+         8   -> uart_printf
+         8 __aeabi_uidiv
+       0   FTL_CheckWP
+       8   FTL_Flush
+         8   -> DATA_Commit
+         8   -> UBI_Flush
+         8   -> UBI_SWL
+       8   FTL_Format
+         8   -> BDT_Format
+         8   -> DATA_Format
+         8   -> HDI_Format
+         8   -> PMT_Format
+         8   -> ROOT_Format
+         8   -> UBI_Format
+         8   -> UBI_Init
+       8   FTL_Init
+         8   -> BDT_Init
+         8   -> DATA_Commit
+         8   -> DATA_IsFull
+         8   -> DATA_Reclaim
+         8   -> DATA_Replay
+         8   -> HDI_Init
+         8   -> PMT_Init
+         8   -> ROOT_Init
+         8   -> UBI_Init
+    2096   FTL_Read
+      2096   -> DATA_Commit
+      2096   -> PMT_Search
+      2096   -> Threshold_DATA_Reclaim
+      2096   -> UBI_Erase
+      2096   -> UBI_Read
+      2096   -> __aeabi_memcpy
+      2096   -> __aeabi_memset
+      2096   -> hmac_sha1
+      2096   -> uart_printf
+       0   FTL_SetWP
+      16   FTL_Trim
+        16   -> FTL_Write
+      24   FTL_Write
+        24   -> DATA_Commit
+        24   -> DATA_IsFull
+        24   -> DATA_Reclaim
+        24   -> DATA_Write
+        24   -> HDI_IsHotPage
+        24   -> uart_printf
+      40   printint
+        40   -> UartWrite
+        40 __aeabi_uidiv
+        40 __aeabi_uidivmod
+      56   printuint
+        56   -> UartWrite
+        56 __aeabi_uidiv
+        56 __aeabi_uidivmod
+      16   show_bytes
+        16   -> uart_printf
+      40   uart_printf
+        40   -> UartWrite
+        40   -> printint
+        40   -> printuint
+
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       4  ??DataTable4
+       4  ??DataTable4_1
+       4  ??DataTable5
+       4  ??DataTable5_1
+       4  ??DataTable5_10
+       4  ??DataTable5_11
+       4  ??DataTable5_12
+       4  ??DataTable5_13
+       4  ??DataTable5_14
+       4  ??DataTable5_15
+       4  ??DataTable5_16
+       4  ??DataTable5_17
+       4  ??DataTable5_2
+       4  ??DataTable5_3
+       4  ??DataTable5_4
+       4  ??DataTable5_5
+       4  ??DataTable5_6
+       4  ??DataTable5_7
+       4  ??DataTable5_8
+       4  ??DataTable5_9
+       4  ??DataTable6
+       4  ??DataTable6_1
+       4  ??DataTable6_2
+       4  ??DataTable7
+       4  ??DataTable7_1
+       4  ??DataTable7_10
+       4  ??DataTable7_11
+       4  ??DataTable7_12
+       4  ??DataTable7_13
+       4  ??DataTable7_14
+       4  ??DataTable7_15
+       4  ??DataTable7_16
+       4  ??DataTable7_17
+       4  ??DataTable7_18
+       4  ??DataTable7_19
+       4  ??DataTable7_2
+       4  ??DataTable7_20
+       4  ??DataTable7_21
+       4  ??DataTable7_22
+       4  ??DataTable7_23
+       4  ??DataTable7_3
+       4  ??DataTable7_4
+       4  ??DataTable7_5
+       4  ??DataTable7_6
+       4  ??DataTable7_7
+       4  ??DataTable7_8
+       4  ??DataTable7_9
+       8  ?_0
+       4  ?_1
+      16  ?_10
+      52  ?_11
+      24  ?_12
+      40  ?_13
+       2  ?_2
+      20  ?_3
+      24  ?_4
+      24  ?_5
+      36  ?_6
+      16  ?_7
+      16  ?_8
+      20  ?_9
+       4  FTL_BgTasks
+      64  FTL_Capacity
+       4  FTL_CheckWP
+      36  FTL_Flush
+      84  FTL_Format
+     176  FTL_Init
+     554  FTL_Read
+       4  FTL_SetWP
+      38  FTL_Trim
+     308  FTL_Write
+       4  backup_version
+       4  current_record_block
+       4  current_record_page
+       4  current_state
+      20  digest
+      20  digits
+      20  digits
+       4  isodd
+       4  max_records
+       4  page_version
+     104  printint
+      64  printuint
+       4  read_address
+    2048  record_cache_page
+       4  record_index
+      32  show_bytes
+       4  start_record_block
+     210  uart_printf
+      16  -- Other
+
+ 
+ 2 096 bytes in section .bss
+    52 bytes in section .data
+   318 bytes in section .rodata
+ 1 870 bytes in section .text
+ 
+ 1 870 bytes of CODE  memory
+   318 bytes of CONST memory
+ 2 148 bytes of DATA  memory
+
+Errors: none
+Warnings: 2

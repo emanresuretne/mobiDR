@@ -1,0 +1,697 @@
+###############################################################################
+#
+# IAR ANSI C/C++ Compiler V7.40.5.9725/W32 for ARM        19/Jan/2021  21:39:47
+# Copyright 1999-2015 IAR Systems AB.
+#
+#    Cpu mode     =  thumb
+#    Endian       =  little
+#    Source file  =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\sys\lpc313x\main.c
+#    Command line =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\sys\lpc313x\main.c
+#        -D BOOT_LEVEL_2 -lcN
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\List
+#        -o
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\Obj
+#        --no_cse --no_unroll --no_inline --no_code_motion --no_tbaa
+#        --no_clustering --no_scheduling --debug --endian=little
+#        --cpu=ARM926EJ-S -e --fpu=None --dlib_config "D:\Program Files\IAR
+#        Systems\Embedded Workbench 7.2\arm\INC\c\DLib_Config_Normal.h" -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\bsp\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\csp\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\lib\
+#        -I
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\..\..\sys\lpc313x\usb\
+#        --cpu_mode thumb -Ol --use_c++_inline
+#    List file    =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\List\main.lst
+#    Object file  =  
+#        C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\prj\iar\Debug\Obj\main.o
+#
+###############################################################################
+
+C:\Users\wen\Desktop\backup_firm_version2\nsac-hiftl—2016.4.6\nsac-hiftl\sys\lpc313x\main.c
+      1          /*************************************************************************
+      2          *
+      3          *   Used with ICCARM and AARM.
+      4          *
+      5          *    (c) Copyright IAR Systems 2009
+      6          *
+      7          *    File name   : main.c
+      8          *    Description :
+      9          *
+     10          *
+     11          *COMPATIBILITY
+     12          *=============
+     13          *
+     14          *   The USB Mass storage example project is compatible with Embedded Artsists
+     15          *  LPC313x evaluation board. By default the project is configured to use the
+     16          *  J-Link JTAG interface.
+     17          *
+     18          *CONFIGURATION
+     19          *=============
+     20          *
+     21          *  The Project contains the following configurations:
+     22          *
+     23          *  Debug: run in iRAM
+     24          *
+     25          *
+     26          *    History :
+     27          *    1. Date        : 22.8.2009
+     28          *       Author      : Stanimir Bonev
+     29          *       Description : initial revision.
+     30          *
+     31          *    $Revision: 32285 $
+     32          **************************************************************************/
+     33          
+     34          /** include files **/
+     35          #include "includes.h"
+     36          
+     37          #include <NXP/iolpc3131.h>
+     38          #include <stdio.h>
+     39          #include <string.h>
+     40          #include "arm926ej_cp15_drv.h"
+     41          #include "arm_comm.h"
+     42          #include "drv_spi.h"
+     43          #include "drv_spinor.h"
+     44          #include "drv_intc.h"
+     45          #include "math.h"
+     46          
+     47          #include "lpc313x_timer_driver.h"
+     48          #include "lpc313x_usbotg.h"
+     49          #include "lpc313x_usbd_driver.h"
+     50          #include "lpc313x_chip.h"
+     51          #include "mscuser.h"
+     52          #include "usbcore.h"
+     53          #include "usbhw.h"
+     54          
+     55          #include <core\inc\ubi.h>
+     56          #include <onfm.h>
+     57          #include <core\inc\cmn.h>
+     58          #include <core\inc\buf.h>
+     59          #include <core\inc\mtd.h>
+     60          #include <core\inc\ftl.h>
+     61          //#include <core\polar\include\polarssl\aes.h>
+     62          
+     63          #include <stdio.h>
+     64          #include <stdint.h>
+     65          #include <stdlib.h>
+     66          #include <string.h>
+     67          // #include <sys/stat.h>
+     68          #include <errno.h>
+     69          #include <math.h> 
+     70          #include <inttypes.h>
+     71          
+     72          #define SDRAM_BASE_ADDR 0x30000000
+     73          #define SDRAM_SIZE      0x02000000
+     74          
+     75          /** external functions **/
+     76          extern void InitSDRAM(void);
+     77          
+     78          /** internal functions **/
+     79          extern void USB_EndPoint0 (UNS_32 event);
+     80          
+     81          
+     82          #pragma data_alignment=DMA_BURST_BYTES
+     83          unsigned char sector_buffer[SECTOR_SIZE];
+     84          
+     85          #pragma data_alignment=DMA_BURST_BYTES
+     86          unsigned char read_sector_buffer[SECTOR_SIZE];
+     87          
+     88          #pragma data_alignment=DMA_BURST_BYTES
+     89          UINT8 write_page_buffer[MPP_SIZE];
+     90          #pragma data_alignment=DMA_BURST_BYTES
+     91          UINT8 read_page_buffer[MPP_SIZE];
+     92          
+     93          #define ISROM_MMU_TTBL              (0x1201C000)
+     94          #define USER_SPACE_SECTOR_COUNT     (ONFM_Capacity())
+     95          
+     96          
+     97          // extern int PMT_isvalid(PGADDR page_addr);
+     98          
+     99          // static UINT8 test_buffer[MPP_SIZE];
+    100          // static UINT8 test_buffer[2048];
+    101          // static unsigned char test_string[2048];
+    102          // static char *back_up="backup_initial";
+    103          // static char *restore="restore_initial";
+    104          // static char *restore_f="restore_finished";
+    105          int backup_flag = 0;
+    106          int restore_flag = 0;
+    107          int initial_flag = 0;    // set after format
+    108          
+    109          // typedef unsigned char uint8_t;
+    110          
+    111          // extern int sha1digest(uint8_t *digest, const uint8_t *data, size_t databytes);
+    112          
+    113          // extern void hmac_sha1(unsigned char *digest, unsigned char *data, int data_length);
+    114          
+    115          typedef unsigned char *byte_pointer;
+    116          extern void show_bytes(byte_pointer start, int len);
+    117          
+    118          // extern bool rsa1024(uint64_t res[], uint64_t data[], uint64_t expo[],uint64_t key[]);
+    119          
+    120          // uint8_t digest[20];
+    121          // char hexdigest[41];
+    122          // char *hash_data;
+    123          // unsigned char * testdigest;
+    124          
+    125          // int i0;
+    126          // uint64_t x[20]={0},z[20]={0},e[18]={0};
+    127          // uint8_t data[150]={0xB4,0x55,0x6A,0xBB,0xF1,0x68,0x88,0x98,0x46,0xE4,0xB8,0xC7,0xDA,0xB1,0xB7,0x7E,0x78,0x5F,0x73,0x51,0xC3,0x77,0x23,0x25,0x29,0x49,0xE0,0x66,0x6E,0x70,0x0D,0x1C,0x5F,0x9A,0xE7,0x01,0x7D,0x9C,0xEA,0x4E,0xA9,0x94,0xA5,0x3C,0xA0,0x36,0xA4,0x74,0xFD,0x44,0x95,0x4C,0xDD,0x4D,0x73,0x6D,0xC9,0x18,0xF0,0x99,0x79,0xE5,0x16,0x23,0x02,0xB2,0xA9,0x18,0xC0,0x7B,0x55,0x2F,0xD0,0xFC,0x0F,0x1C,0x67,0xAC,0x01,0x5C,0x12,0x1C,0x3B,0x7B,0x60,0xD8,0x8C,0x7E,0x34,0x2E,0x2D,0x86,0x3B,0x10,0x51,0x41,0x8C,0xCE,0x67,0xC5,0xE4,0x40,0xC4,0x44,0xF6,0xD5,0x9D,0xE3,0x3F,0x4E,0xC7,0x42,0xE0,0x83,0x6A,0x76,0x45,0x62,0xDD,0xF7,0x5D,0xAE,0x1B,0xB3,0x5E,0x1E,0xCD,0xDF};
+    128          
+    129          // char msg[150] = {0};
+    130          
+    131          // uint8_t y[150]={0x15,0xCA,0xFC,0xCB,0x19,0xB1,0x78,0x50,0x6E,0xC0,0xD5,0x53,0xD1,0xAA,0x08,0x72,0xD0,0x39,0x38,0xC6,0x78,0xC8,0xBD,0x06,0x90,0xA6,0xCC,0xE7,0x94,0x11,0x16,0x84,0x87,0x49,0x41,0x01,0x7D,0x1C,0xA9,0x74,0x38,0x2A,0x2E,0x8D,0xD5,0x0E,0xC5,0x71,0x1D,0xEA,0x5B,0xE0,0x9E,0x1D,0xEE,0x05,0x26,0x78,0x4D,0x1B,0x3F,0x0F,0xE0,0x4C,0xC6,0xBF,0x45,0xCA,0x17,0x16,0xB0,0xBC,0xB8,0xB9,0xF4,0xAC,0xAE,0xDB,0xFD,0xBA,0x05,0x40,0x2E,0xFA,0xBF,0xB4,0xF1,0x53,0x79,0x20,0x7C,0xC8,0xE5,0x84,0x81,0x46,0xAA,0xFD,0x47,0xA8,0x4D,0x14,0xDA,0x29,0xAF,0xA9,0x56,0x1E,0x6D,0xF0,0xC3,0x05,0xFF,0x57,0xF3,0xDB,0xFA,0x6B,0xA2,0x82,0x5C,0xDC,0xF4,0x00,0x59,0x2A,0x08,0x01};
+    132          
+    133          
+    134          
+    135          /***********************************************************************
+    136          *
+    137          * Function: USB_Reset_Event
+    138          *
+    139          * Purpose: USB Reset Event Callback
+    140          *
+    141          * Processing:
+    142          *     Called automatically on USB Reset Event.
+    143          *
+    144          * Parameters: None
+    145          *
+    146          * Outputs: None
+    147          *
+    148          * Returns: Nothing
+    149          *
+    150          * Notes: None
+    151          *
+    152          ***********************************************************************/
+    153          void USB_Reset_Event(void)
+    154          {
+    155            USB_ResetCore();
+    156          }
+    157          
+    158          #if USB_CONFIGURE_EVENT
+    159          /***********************************************************************
+    160          *
+    161          * Function: USB_Configure_Event
+    162          *
+    163          * Purpose: USB Configure Event Callback
+    164          *
+    165          * Processing:
+    166          *     Called automatically on USB configure Event.
+    167          *
+    168          * Parameters: None
+    169          *
+    170          * Outputs: None
+    171          *
+    172          * Returns: Nothing
+    173          *
+    174          * Notes: None
+    175          *
+    176          ***********************************************************************/
+    177          void USB_Configure_Event (void)
+    178          {
+    179            
+    180          }
+    181          #endif
+    182          
+    183          /***********************************************************************
+    184          *
+    185          * Function: USB_EndPoint1
+    186          *
+    187          * Purpose: USB Endpoint 1 Event Callback
+    188          *
+    189          * Processing:
+    190          *     Called automatically on USB Endpoint 1 Event
+    191          *
+    192          * Parameters: None
+    193          *
+    194          * Outputs: None
+    195          *
+    196          * Returns: Nothing
+    197          *
+    198          * Notes: None
+    199          *
+    200          ***********************************************************************/
+    201          void USB_EndPoint1 (UNS_32 event)
+    202          {
+    203            switch (event)
+    204            {
+    205            case USB_EVT_OUT_NAK:
+    206              MSC_BulkOutNak();
+    207              break;
+    208            case USB_EVT_OUT:
+    209              MSC_BulkOut();
+    210              break;
+    211            case USB_EVT_IN_NAK:
+    212              MSC_BulkInNak();
+    213              break;
+    214            case USB_EVT_IN:
+    215              MSC_BulkIn();
+    216              break;
+    217            }
+    218          }
+    219          
+    220          
+    221          static void init_usb()
+    222          {
+    223            LPC_USBDRV_INIT_T usb_cb;
+    224            
+    225            // Enable USB interrupts
+    226            // Install Interrupt Service Routine, Priority
+    227            INTC_IRQInstall(USB_ISR, IRQ_USB, USB_INTR_PRIORITY,0);
+    228            
+    229            /* initilize call back structures */
+    230            memset((void*)&usb_cb, 0, sizeof(LPC_USBDRV_INIT_T));
+    231            usb_cb.USB_Reset_Event = USB_Reset_Event;
+    232            usb_cb.USB_P_EP[0] = USB_EndPoint0;
+    233            usb_cb.USB_P_EP[1] = USB_EndPoint1;
+    234            usb_cb.ep0_maxp = USB_MAX_PACKET0;
+    235            /* USB Initialization */
+    236            USB_Init(&usb_cb);
+    237          }
+    238          
+    239          bool StartsWith(const char *a, const char *b)
+    240          {
+    241             if(strncmp(a, b, strlen(b)) == 0) return 1;
+    242             return 0;
+    243          }
+    244          
+    245          static void usb_user_task_loop()
+    246          {
+    247            int pop;
+    248            UNS_32 offset;
+    249            UNS_32 length;
+    250            
+    251            uart_printf("start loop:\n");
+    252            while (1)
+    253            {  
+    254              pop = ut_pop;
+    255              //push = ut_push;
+    256              //if (ut_pop != ut_push)
+    257              if (pop != ut_push)
+    258              {
+    259                if (ut_list[pop].type == UT_WRITE)
+    260                {
+    261                  // uart_printf("offset is %d, length is %d:\n", ut_list[pop].offset, ut_list[pop].length);
+    262                         
+    263               
+    264                  LED_SET(LED2);
+    265          
+    266                  ONFM_Write(ut_list[pop].offset,
+    267                             ut_list[pop].length,
+    268                             ut_list[pop].buffer);
+    269                  
+    270                  LED_CLR(LED2);
+    271                  
+    272                  
+    273                }
+    274                else if (ut_list[pop].type == UT_READ)
+    275                {
+    276                  if (Read_BulkLen == 0)
+    277                  {
+    278                    LED_SET(LED1);
+    279                    
+    280                    offset = ut_list[pop].offset;
+    281                    length = ut_list[pop].length;
+    282                    
+    283                    /*
+    284                    if(offset == 800000){
+    285                      uart_printf("main lenght is %d\n", length);
+    286                    }
+    287                    */
+    288                    
+    289          
+    290                    ONFM_Read(offset,
+    291                              length,
+    292                              ut_list[pop].buffer);
+    293                    
+    294                    LED_CLR(LED1);
+    295                    
+    296                    /* tell the IN NAK INT the buffer is ready to prime */
+    297                    Read_BulkLen = (ut_list[pop].length)*MSC_BlockSize;
+    298                  }
+    299                }
+    300                else
+    301                {
+    302                  ASSERT(ut_list[pop].type == UT_MERGE);
+    303                  
+    304                  if (merge_stage == MERGE_START)
+    305                  {
+    306                    ONFM_Read(ut_list[pop].offset,
+    307                              ut_list[pop].length,
+    308                              ut_list[pop].buffer);
+    309                    
+    310                    merge_stage = MERGE_FINISH;
+    311                  }
+    312                }
+    313                
+    314                /* next write operation */
+    315                ut_pop = (ut_pop+1)%UT_LIST_SIZE;
+    316              }
+    317            }
+    318          }
+    319          
+    320          static void SDRAM_Test(void)
+    321          {
+    322          char s[64];
+    323            sprintf(s,"\n\rStart SDRAM Test\n\r");  
+    324            UartWrite((unsigned char *)s,strlen(s));
+    325          
+    326            /*32bit access test*/
+    327            sprintf(s,"32-bits write\n\r");
+    328            UartWrite((unsigned char *)s,strlen(s));
+    329            /*Start from stram base address*/
+    330            volatile unsigned int * uint_dest = (unsigned int *)SDRAM_BASE_ADDR;
+    331            for(int i = 0; i < SDRAM_SIZE/sizeof(int); i++,uint_dest++)
+    332            {
+    333              /*32-bits write*/
+    334              * uint_dest = i;
+    335            }
+    336            /*32-bits verify*/
+    337            sprintf(s,"32-bits verify\n\r");
+    338            UartWrite((unsigned char *)s,strlen(s));
+    339          
+    340            uint_dest = (unsigned int *)SDRAM_BASE_ADDR;
+    341            for(int i = 0; i < SDRAM_SIZE/sizeof(int); i++,uint_dest++)
+    342            {
+    343              /*32-bits read*/
+    344              if (* uint_dest != i)
+    345              {
+    346                /*verify error*/
+    347                sprintf(s,"SDRAM 32-bits R/W Error at address %0x\n\r",(unsigned int)uint_dest);
+    348                UartWrite((unsigned char *)s,strlen(s));
+    349                break;
+    350              }
+    351            }
+    352            
+    353            /*16-bits access test*/
+    354            sprintf(s,"16-bits write\n\r");
+    355            UartWrite((unsigned char *)s,strlen(s));
+    356            /*Start from stram base address*/
+    357            volatile unsigned short * ushrt_dest = (unsigned short *)SDRAM_BASE_ADDR;
+    358            for(int i = 0; i < SDRAM_SIZE/sizeof(short); i++,ushrt_dest++)
+    359            {
+    360              /*16-bits write*/
+    361              *ushrt_dest = (i^(i>>16));
+    362            }
+    363            /*16-bits verify*/
+    364            sprintf(s,"16-bits verify\n\r");
+    365            UartWrite((unsigned char *)s,strlen(s));
+    366          
+    367            ushrt_dest = (unsigned short *)SDRAM_BASE_ADDR;
+    368            for(int i = 0; i < SDRAM_SIZE/sizeof(short); i++,ushrt_dest++)
+    369            {
+    370              /*16-bits read*/
+    371              if ( *ushrt_dest != ((i^(i>>16))&0xFFFF))
+    372              {
+    373                /*verify error*/
+    374                sprintf(s,"SDRAM 16-bits R/W Error at address 0x%0x\n\r",(unsigned int)ushrt_dest);
+    375                UartWrite((unsigned char *)s,strlen(s));
+    376                break;
+    377              }
+    378            }
+    379            
+    380            /*8-bits access test*/
+    381            sprintf(s,"8-bits write\n\r");
+    382            UartWrite((unsigned char *)s,strlen(s));
+    383            /*Start from stram base address*/
+    384            volatile unsigned char * uchar_dest = (unsigned char *)SDRAM_BASE_ADDR;
+    385            for(int i = 0; i < SDRAM_SIZE; i++,uchar_dest++)
+    386            {
+    387              /*16-bits write*/
+    388              *uchar_dest = i^(i>>8);
+    389            }
+    390            /*8-bits verify*/
+    391            sprintf(s,"8-bits verify\n\r");
+    392            UartWrite((unsigned char *)s,strlen(s));
+    393          
+    394            uchar_dest = (unsigned char *)SDRAM_BASE_ADDR;
+    395            for(int i = 0; i < SDRAM_SIZE; i++,uchar_dest++)
+    396            {
+    397              /*8-bits read*/
+    398              if ( *uchar_dest != ((i^(i>>8))&0xFF))
+    399              {
+    400                /*verify error*/
+    401                sprintf(s,"SDRAM 8-bits R/W Error at address %0x\n\r",(unsigned int)ushrt_dest);
+    402                UartWrite((unsigned char *)s,strlen(s));
+    403                break;
+    404              }
+    405            }
+    406          
+    407            sprintf(s,"SDRAM Test end\n\r");  
+    408            UartWrite((unsigned char *)s,strlen(s));
+    409          
+    410          }
+    411          
+    412          /*************************************************************************
+    413          * Function Name: main
+    414          * Parameters: None
+    415          *
+    416          * Return: None
+    417          *
+    418          * Description: Getting Started main loop
+    419          *
+    420          *************************************************************************/
+    421          void main(void)
+    422          {
+    423            int onfm_ret = 0;
+    424           #if 0 
+    425            CP15_Mmu(FALSE);            // Disable MMU
+    426            CP15_ICache(TRUE);          // Enable ICache
+    427          
+    428            CP15_SysProt(FALSE);
+    429            CP15_RomProt(TRUE);
+    430            CP15_SetTtb((Int32U *)ISROM_MMU_TTBL);  //Set translation table base address
+    431            CP15_SetDomain( (DomainManager << 2*1) | (DomainClient << 0)); // Set domains
+    432            CP15_Mmu(TRUE);             // Enable MMU
+    433            CP15_Cache(TRUE);           // Enable ICache,DCache
+    434          #endif  
+    435            
+    436          #ifndef BOOT_LEVEL_2
+    437            InitClock();
+    438            InitSDRAM();
+    439            InitSPINOR();
+    440          #endif
+    441            
+    442          
+    443            // Uncomment for SDRAM experiment.
+    444             InitSDRAM();
+    445          
+    446            /* TODO:
+    447            * - test DMA copy in SDRAM w/ and w/o clock enable.
+    448            * - test USB RAMDisk speed
+    449            * - test mtd speed
+    450            * - test ONFM-USB
+    451            * - debug, use K9HAG.
+    452            */
+    453            
+    454            /*Init Interrupt Controller.
+    455            Arm Vector Copy to beginnint of the IRAM*/
+    456            INTC_Init((Int32U *)ISRAM_ESRAM0_BASE);
+    457            /*Remap IRAM at address 0*/
+    458            SYSCREG_ARM926_901616_LP_SHADOW_POINT = ISRAM_ESRAM0_BASE;
+    459            
+    460            init_usb();
+    461            
+    462            // Uncomment for SDRAM experiment.
+    463            //SDRAM_Test();
+    464            
+    465            //jsj修改
+    466            //原来是只执行ONFM_Mount()，若成功就不执行ONFM_Format()了，使得不必每次下载完代码都需要格式化文件系统
+    467            //现在改成先执行ONFM_Format()，再执行ONFM_Mount()，这样每次下载完代码都需要格式化文件系统
+    468            
+    469            /* init ONFM */  
+    470            //onfm_ret = ONFM_Mount();
+    471            onfm_ret = -1;
+    472            if (onfm_ret != 0) {
+    473              /* init failed, try to format */
+    474              onfm_ret = ONFM_Format();
+    475              if (onfm_ret == 0) {
+    476                onfm_ret = ONFM_Mount();
+    477              }
+    478            }
+    479            
+    480            if (onfm_ret == 0) {
+    481              MSC_Init();
+    482              
+    483              // Enable USB interrupt
+    484              INTC_IntEnable(IRQ_USB, 1);
+    485              __enable_irq();
+    486              
+    487              /* wait */
+    488              timer_wait_ms(NULL, 10);
+    489               
+    490              
+    491              /* USB Connect */
+    492              USB_Connect(TRUE);
+    493              uart_printf("usb connect\n");
+    494            }    
+    495            
+    496            //jsj 运行到此时提示格式化文件系统
+    497              
+    498            
+    499            // write test data
+    500            /*
+    501            for(int i=0;i<2047;i++){
+    502              test_string[i]='a';
+    503            }
+    504            
+    505            FTL_Write(4000, test_string);
+    506            FTL_Read(4000, test_buffer);
+    507            //for(int i=0;i<10;i++){
+    508              uart_printf("%s\n", test_buffer);
+    509            //}
+    510            */
+    511            
+    512            
+    513            /* test sha-1 and hmac-sha-1 */
+    514            /* 
+    515            hash_data = "The quick brown fox jumps over the lazy dog";
+    516            
+    517            if (sha1digest(digest, hash_data, strlen(data)))
+    518           {
+    519              uart_printf ("Error with sha1digest()\n");
+    520           } else {
+    521              // bin_to_strhex(digest, 20, &testdigest);
+    522              uart_printf ("hex_digest:   '%s'\n",  digest);
+    523              show_bytes(digest, 20);
+    524           }
+    525            
+    526           hash_data = "b";
+    527           hmac_sha1(digest, hash_data, strlen(hash_data));
+    528           show_bytes(digest, 20);
+    529           */
+    530            
+    531            
+    532            /* main loop to handle usb read/write tasks in USER SPACE */
+    533            usb_user_task_loop();
+    534            
+    535           
+    536                
+    537            /* TODO: call unmount to flush and check program status
+    538            * periodly after a long time delay. Avoid PLR or unsafe plug-out
+    539            */
+    540            ONFM_Unmount();
+    541            
+    542            /* TODO: use watchdog timer, to reset system */
+    543          }
+
+   Maximum stack usage in bytes:
+
+   .cstack Function
+   ------- --------
+      16   StartsWith
+        16   -> strlen
+        16   -> strncmp
+       0   USB_Configure_Event
+       8   USB_EndPoint1
+         8   -> MSC_BulkIn
+         8   -> MSC_BulkInNak
+         8   -> MSC_BulkOut
+         8   -> MSC_BulkOutNak
+       8   USB_Reset_Event
+         8   -> USB_ResetCore
+      72   init_usb
+        72   -> INTC_IRQInstall
+        72   -> USB_Init
+        72   -> __aeabi_memset
+       8   main
+         8   -> INTC_Init
+         8   -> INTC_IntEnable
+         8   -> InitSDRAM
+         8   -> MSC_Init
+         8   -> ONFM_Format
+         8   -> ONFM_Mount
+         8   -> ONFM_Unmount
+         8   -> USB_Connect
+         8   -> init_usb
+         8   -> timer_wait_ms
+         8   -> uart_printf
+         8   -> usb_user_task_loop
+         8 __iar_enable_irq
+      40   printint
+        40   -> UartWrite
+        40 __aeabi_uidiv
+        40 __aeabi_uidivmod
+      56   printuint
+        56   -> UartWrite
+        56 __aeabi_uidiv
+        56 __aeabi_uidivmod
+      40   uart_printf
+        40   -> UartWrite
+        40   -> printint
+        40   -> printuint
+       8   usb_user_task_loop
+         8   -> ONFM_Read
+         8   -> ONFM_Write
+         8   -> uart_printf
+         8 __aeabi_uidivmod
+
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       4  ??DataTable4
+       4  ??DataTable4_1
+       4  ??DataTable5
+       4  ??DataTable5_1
+       4  ??DataTable5_10
+       4  ??DataTable5_11
+       4  ??DataTable5_12
+       4  ??DataTable5_13
+       4  ??DataTable5_14
+       4  ??DataTable5_15
+       4  ??DataTable5_16
+       4  ??DataTable5_2
+       4  ??DataTable5_3
+       4  ??DataTable5_4
+       4  ??DataTable5_5
+       4  ??DataTable5_6
+       4  ??DataTable5_7
+       4  ??DataTable5_8
+       4  ??DataTable5_9
+       8  ?_0
+      16  ?_1
+      16  ?_2
+       4  SYSCREG_ARM926_901616_LP_SHADOW_POINT
+      34  StartsWith
+       2  USB_Configure_Event
+      44  USB_EndPoint1
+       8  USB_Reset_Event
+       4  _A_IOCONF_GPIO_M0_CLR
+       4  _A_IOCONF_GPIO_M0_SET
+       4  _A_IOCONF_GPIO_M1_SET
+       4  backup_flag
+      20  digits
+      20  digits
+      54  init_usb
+       4  initial_flag
+      94  main
+     104  printint
+      64  printuint
+    2048  read_page_buffer
+     512  read_sector_buffer
+       4  restore_flag
+     512  sector_buffer
+     210  uart_printf
+     286  usb_user_task_loop
+    2048  write_page_buffer
+      16  -- Other
+
+ 
+ 5 132 bytes in section .bss
+    40 bytes in section .data
+    16 bytes in section .noinit (abs)
+    40 bytes in section .rodata
+   992 bytes in section .text
+ 
+   976 bytes of CODE  memory (+ 16 bytes shared)
+    40 bytes of CONST memory
+ 5 172 bytes of DATA  memory (+ 16 bytes shared)
+
+Errors: none
+Warnings: 1
