@@ -1,0 +1,20 @@
+user_ta_header.o: \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/src/user_ta_header.c \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/compiler.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/tee_ta_api.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/tee_api_defines.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/tee_api_types.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/inttypes.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/stdint.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/limits.h \
+ /media/wen/My_Passport/Raspbian/gcc-linaro-6.1.1-2016.08-i686_arm-linux-gnueabihf/lib/gcc/arm-linux-gnueabihf/6.1.1/include/stdbool.h \
+ /media/wen/My_Passport/Raspbian/gcc-linaro-6.1.1-2016.08-i686_arm-linux-gnueabihf/lib/gcc/arm-linux-gnueabihf/6.1.1/include/stddef.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/tee_internal_api_extensions.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/trace.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/trace_levels.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/stdio.h \
+ /media/wen/My_Passport/Raspbian/gcc-linaro-6.1.1-2016.08-i686_arm-linux-gnueabihf/lib/gcc/arm-linux-gnueabihf/6.1.1/include/stdarg.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/tee_api_defines_extensions.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/user_ta_header.h \
+ /media/wen/My_Passport/Raspbian/raspbian-tee/raspbian-tee/optee_os/out/arm/export-ta_arm32/include/util.h \
+ user_ta_header_defines.h include/socket_test_ta.h
